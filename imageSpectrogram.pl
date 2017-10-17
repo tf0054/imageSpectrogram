@@ -98,7 +98,7 @@ sub add_sine {
           my $time = ($pos / $sample_rate) * @freqs[$count];
           $val += sin(TWO_PI * $time)*10/(10 ** @freqs[$count + 1]); 
        }
-       $val /= $count+1;
+       $val /= $count*10+1;
        my $samp = $val * $max_no;
        $write->write($samp);
    }
