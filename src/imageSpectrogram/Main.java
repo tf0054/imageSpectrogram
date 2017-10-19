@@ -1,5 +1,7 @@
 package imageSpectrogram;
 
+import java.awt.geom.AffineTransform;
+import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.File;
@@ -17,12 +19,9 @@ public class Main {
     //
     final static double TWO_PI = Math.PI*2;
 
-    public static void main(String[] args) throws InterruptedException, LineUnavailableException
-    {
-        //Position through the sine wave as a percentage (i.e. 0 to 1 is 0 to 2*PI)
-
+    public static void main(String[] args) throws InterruptedException, LineUnavailableException {
         try {
-            BufferedImage image = ImageIO.read(Main.class.getResource("takeshi2.png"));
+            BufferedImage image = rotate(ImageIO.read(Main.class.getResource("takeshi2.png")));
             final byte[] pixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
             final int srcW = image.getWidth();
             final int srcH = image.getHeight();
@@ -34,9 +33,9 @@ public class Main {
 
             HashMap<Integer, Double> t = new HashMap<Integer, Double>();
             for (int pixel = 0, row = 0, col = 0; pixel < pixels.length; pixel += pixelLength) {
-                int r = (((int) pixels[pixel+1]) >>16) & 0xff; // blue
-                int g = (((int) pixels[pixel+2]) >>8) & 0xff; // green
-                int b = ((int) pixels[pixel+3]) & 0xff; // red
+                int r = (((int) pixels[pixel + 1]) >> 16) & 0xff;
+                int g = (((int) pixels[pixel + 2]) >> 8) & 0xff;
+                int b = ((int) pixels[pixel + 3]) & 0xff;
 ;
                 if( r > 10 || g > 10 && b > 10 ) {
 
@@ -60,6 +59,17 @@ public class Main {
         }
     }
 
+    // needed because ImageIO provides seq access for pixcels with x axsis
+    private static BufferedImage rotate(BufferedImage buffer) {
+        AffineTransform at = AffineTransform.getScaleInstance(1, -1);
+
+        at.translate(0, -buffer.getHeight(null));
+        at.rotate(Math.toRadians(-90),buffer.getWidth() / 2, buffer.getHeight() / 2);
+
+        AffineTransformOp op = new AffineTransformOp(at, AffineTransformOp.TYPE_BILINEAR);
+        return op.filter(buffer, null);
+    }
+
     private static void add_sine(WavFile waveFile, double length, HashMap<Integer, Double> freqs) throws InterruptedException, IOException, WavFileException {
         double max_no = Math.pow(2, BIT_SAMPLES) / 2;
         length *= SAMPLING_RATE;
@@ -74,10 +84,10 @@ public class Main {
             while(entries.hasNext()) {
                 freq = entries.next();
                 time = (pos / (double)SAMPLING_RATE) * freq.getKey();
-                val += Math.sin(TWO_PI* time)*10/(Math.pow(10, freq.getValue()));
+                val += Math.sin(TWO_PI * time) * 10 / (Math.pow(10, freq.getValue()));
             }
-            val /= freqs.size()*10+1;
-            buf[pos] = (int)(val*max_no);
+            val /= freqs.size() * 10 + 1;
+            buf[pos] = (int)(val * max_no);
         }
         waveFile.writeFrames(buf, (int)length);
     }
