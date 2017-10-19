@@ -11,6 +11,9 @@ import javax.sound.sampled.*;
 public class Main {
     //This is just an example - you would want to handle LineUnavailable properly...
     final static int SAMPLING_RATE = 44100;
+    final static int BIT_SAMPLES = 16;
+
+    final static double SIN_LENGTH_SEC = 0.2;
     //
     final static double TWO_PI = Math.PI*2;
 
@@ -27,7 +30,7 @@ public class Main {
 
             // Create a wav file with the name specified as the first argument
             WavFile wavFile = WavFile.newWavFile(new File(args[0]), 1,
-                    (long)(srcW/0.2*SAMPLING_RATE), 16, SAMPLING_RATE);
+                    (long)(srcW/SIN_LENGTH_SEC*SAMPLING_RATE), BIT_SAMPLES, SAMPLING_RATE);
 
             HashMap<Integer, Double> t = new HashMap<Integer, Double>();
             for (int pixel = 0, row = 0, col = 0; pixel < pixels.length; pixel += pixelLength) {
@@ -39,13 +42,13 @@ public class Main {
 
                     int k = (int)(22000 - (row + 1.0) / (srcH + 1) * 22000);
                     double c = 4.25 - 4.25 * (r + g + b) / (256 * 3);
-                    t.put(k, c );
+                    t.put(k, c);
                 }
 
                 row++;
                 if (row == srcH) {
                     row = 0;
-                    add_sine(wavFile,0.2,(int)(0.2*SAMPLING_RATE*col),t);
+                    add_sine(wavFile, SIN_LENGTH_SEC, t);
                     t.clear();
                     col++;
                 }
@@ -57,8 +60,8 @@ public class Main {
         }
     }
 
-    private static void add_sine(WavFile line, double length, int offset, HashMap<Integer, Double> freqs) throws InterruptedException, IOException, WavFileException {
-        double max_no = Math.pow(2, 16) / 2;
+    private static void add_sine(WavFile waveFile, double length, HashMap<Integer, Double> freqs) throws InterruptedException, IOException, WavFileException {
+        double max_no = Math.pow(2, BIT_SAMPLES) / 2;
         length *= SAMPLING_RATE;
         int[] buf = new int[(int)length];
 
@@ -66,15 +69,16 @@ public class Main {
             double val = 0;
             double time = 0;
 
+            Map.Entry<Integer, Double> freq = null;
             Iterator<Map.Entry<Integer, Double>> entries = freqs.entrySet().iterator();
             while(entries.hasNext()) {
-                Map.Entry<Integer, Double> freq = entries.next();
+                freq = entries.next();
                 time = (pos / (double)SAMPLING_RATE) * freq.getKey();
                 val += Math.sin(TWO_PI* time)*10/(Math.pow(10, freq.getValue()));
             }
             val /= freqs.size()*10+1;
             buf[pos] = (int)(val*max_no);
         }
-        line.writeFrames(buf,  (int)length);
+        waveFile.writeFrames(buf, (int)length);
     }
 }
